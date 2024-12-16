@@ -47,21 +47,20 @@
 
             let pdfDoc = null;
 
-            async function renderPDF(pageNum) {
-                pdfDoc = await pdfjsLib
-                         .getDocument(url)
-                         .promise;
+            async function renderPDF() {
+                const pdfDoc = await pdfjsLib.getDocument(url).promise;
 
                 if (!pdfDoc) return;
 
+                const container = document.getElementById('pdf-container');
+
+                pdfContainer.innerHTML=""
+                
                 for (let pageNum = 1; pageNum <= 10; pageNum++) {
                     const page = await pdfDoc.getPage(pageNum);
 
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
-
-                    const container = document.getElementById('pdf-container');
-                    container.innerHTML = '';
 
                     const scale = container.clientWidth / page.getViewport({ scale: 1 }).width;
                     const viewport = page.getViewport({ scale: scale });
@@ -69,27 +68,27 @@
                     canvas.height = viewport.height;
                     canvas.width = viewport.width;
 
-                    // Создаем контейнер для страницы и ссылок
                     const pageContainer = document.createElement('div');
                     pageContainer.style.position = 'relative';
-                    pdfContainer.appendChild(pageContainer);
 
-                    // Обрабатываем аннотации (ссылки)
+                    pageContainer.appendChild(canvas);
+
                     const annotations = await page.getAnnotations();
-                        annotations.forEach(annotation => {
-                            if (annotation.subtype === 'Link') {
-                                addLinkAnnotation(annotation, pageContainer, viewport, pageNum);
-                            }
-                        });
-
-                    page.render({
-                    canvasContext: context,
-                    viewport: viewport
+                    annotations.forEach(annotation => {
+                        if (annotation.subtype === 'Link') {
+                            addLinkAnnotation(annotation, pageContainer, viewport, pageNum);
+                        }
                     });
 
-                    container.appendChild(canvas);
+                    await page.render({
+                        canvasContext: context,
+                        viewport: viewport
+                    }).promise;
+
+                    container.appendChild(pageContainer);
                 }
             }
+
 
             // Функция для рендеринга всех страниц PDF
             // async function renderPDF() {
@@ -201,10 +200,10 @@
             }
 
             // Запускаем рендеринг PDF
-            renderPDF(1);
+            renderPDF();
 
             window.addEventListener('resize', () => {
-                renderPDF(1);
+                renderPDF();
             });
         </script>
     </body>
