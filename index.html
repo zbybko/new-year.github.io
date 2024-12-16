@@ -75,16 +75,13 @@
                     });
                 }
 
-                renderPage(1);
+                renderPage(currentPage);
 
+                window.addEventListener('resize', () => {
+                    renderPage(currentPage);
+                });
             }).catch(error => {
                 console.error('Error loadig pdf:', error);
-            });
-
-            renderPage(currentPage);
-
-            window.addEventListener('resize', () => {
-                renderPage(currentPage);
             });
 
             // Функция для рендеринга всех страниц PDF
