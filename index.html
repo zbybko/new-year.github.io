@@ -47,7 +47,7 @@
 
             let pdfDoc = null;
 
-            function renderPage(pageNum) {
+            function renderPDF(pageNum) {
                 if (!pdfDoc) return;
 
                 pdfDoc.getPage(pageNum).then(page => {
