@@ -54,7 +54,9 @@
 
                 if (!pdfDoc) return;
 
-                pdfDoc.getPage(pageNum).then(page => {
+                for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                    const page = await pdfDoc.getPage(pageNum);
+
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
 
@@ -67,13 +69,26 @@
                     canvas.height = viewport.height;
                     canvas.width = viewport.width;
 
+                    // Создаем контейнер для страницы и ссылок
+                    const pageContainer = document.createElement('div');
+                    pageContainer.style.position = 'relative';
+                    pdfContainer.appendChild(pageContainer);
+
+                    // Обрабатываем аннотации (ссылки)
+                    const annotations = await page.getAnnotations();
+                        annotations.forEach(annotation => {
+                            if (annotation.subtype === 'Link') {
+                                addLinkAnnotation(annotation, pageContainer, viewport, pageNum);
+                            }
+                        });
+
                     page.render({
                     canvasContext: context,
                     viewport: viewport
                     });
 
                     container.appendChild(canvas);
-                });
+                }
             }
 
             // Функция для рендеринга всех страниц PDF
@@ -90,16 +105,16 @@
             //             const scale = pdfContainer.clientWidth / page.getViewport({ scale: 1 }).width;
             //             const viewport = page.getViewport({ scale: scale });
 
-            //             // Создаем контейнер для страницы и ссылок
-            //             const pageContainer = document.createElement('div');
-            //             pageContainer.style.position = 'relative';
-            //             pdfContainer.appendChild(pageContainer);
+                        // // Создаем контейнер для страницы и ссылок
+                        // const pageContainer = document.createElement('div');
+                        // pageContainer.style.position = 'relative';
+                        // pdfContainer.appendChild(pageContainer);
 
-            //             // Создаем canvas для рендеринга страницы
-            //             const canvas = document.createElement('canvas');
-            //             canvas.width = viewport.width;
-            //             canvas.height = viewport.height;
-            //             pageContainer.appendChild(canvas);
+                        // // Создаем canvas для рендеринга страницы
+                        // const canvas = document.createElement('canvas');
+                        // canvas.width = viewport.width;
+                        // canvas.height = viewport.height;
+                        // pageContainer.appendChild(canvas);
 
             //             const context = canvas.getContext('2d');
 
@@ -108,13 +123,13 @@
             //                 .render({canvasContext: context, viewport: viewport})
             //                 .promise;
 
-            //             // Обрабатываем аннотации (ссылки)
-            //             const annotations = await page.getAnnotations();
-            //             annotations.forEach(annotation => {
-            //                 if (annotation.subtype === 'Link') {
-            //                     addLinkAnnotation(annotation, pageContainer, viewport, pageNum);
-            //                 }
-            //             });
+                        // // Обрабатываем аннотации (ссылки)
+                        // const annotations = await page.getAnnotations();
+                        // annotations.forEach(annotation => {
+                        //     if (annotation.subtype === 'Link') {
+                        //         addLinkAnnotation(annotation, pageContainer, viewport, pageNum);
+                        //     }
+                        // });
             //         }
             //     } catch (error) {
             //         console.error('Ошибка загрузки PDF:', error);
