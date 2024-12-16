@@ -17,8 +17,9 @@
                 font-family: Arial, sans-serif;
             }
             #pdf-container {
-                height: 100vh;
-                overflow-y: scroll;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
                 background-color: #f0f0f0;
             }
             .pdf-page {
@@ -46,50 +47,79 @@
 
             let pdfDoc = null;
 
-            // Функция для рендеринга всех страниц PDF
-            async function renderPDF() {
-                try {
-                    pdfDoc = await pdfjsLib
-                        .getDocument(url)
-                        .promise;
-                    console.log('PDF загружен');
+            function renderPage(pageNum) {
+                if (!pdfDoc) return;
 
-                    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-                        const page = await pdfDoc.getPage(pageNum);
-                        
-                        const scale = pdfContainer.clientWidth / page.getViewport({ scale: 1 }).width;
-                        const viewport = page.getViewport({ scale: scale });
+                pdfDoc.getPage(pageNum).then(page => {
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
 
-                        // Создаем контейнер для страницы и ссылок
-                        const pageContainer = document.createElement('div');
-                        pageContainer.style.position = 'relative';
-                        pdfContainer.appendChild(pageContainer);
+                    const container = document.getElementById('pdf-container');
+                    container.innerHTML = ''; // Очистка контейнера перед рендерингом новой страницы
 
-                        // Создаем canvas для рендеринга страницы
-                        const canvas = document.createElement('canvas');
-                        canvas.width = viewport.width;
-                        canvas.height = viewport.height;
-                        pageContainer.appendChild(canvas);
+                    // Получаем ширину контейнера и вычисляем масштаб
+                    const scale = container.clientWidth / page.getViewport({ scale: 1 }).width;
+                    const viewport = page.getViewport({ scale: scale });
 
-                        const context = canvas.getContext('2d');
+                    // Устанавливаем размеры канваса
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
 
-                        // Рендерим страницу на canvas
-                        await page
-                            .render({canvasContext: context, viewport: viewport})
-                            .promise;
+                    // Рендерим страницу на канвасе
+                    page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                    });
 
-                        // Обрабатываем аннотации (ссылки)
-                        const annotations = await page.getAnnotations();
-                        annotations.forEach(annotation => {
-                            if (annotation.subtype === 'Link') {
-                                addLinkAnnotation(annotation, pageContainer, viewport, pageNum);
-                            }
-                        });
-                    }
-                } catch (error) {
-                    console.error('Ошибка загрузки PDF:', error);
-                }
+                    // Добавляем канвас в контейнер
+                    container.appendChild(canvas);
+                });
             }
+
+            // Функция для рендеринга всех страниц PDF
+            // async function renderPDF() {
+            //     try {
+            //         pdfDoc = await pdfjsLib
+            //             .getDocument(url)
+            //             .promise;
+            //         console.log('PDF загружен');
+
+            //         for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+            //             const page = await pdfDoc.getPage(pageNum);
+                        
+            //             const scale = pdfContainer.clientWidth / page.getViewport({ scale: 1 }).width;
+            //             const viewport = page.getViewport({ scale: scale });
+
+            //             // Создаем контейнер для страницы и ссылок
+            //             const pageContainer = document.createElement('div');
+            //             pageContainer.style.position = 'relative';
+            //             pdfContainer.appendChild(pageContainer);
+
+            //             // Создаем canvas для рендеринга страницы
+            //             const canvas = document.createElement('canvas');
+            //             canvas.width = viewport.width;
+            //             canvas.height = viewport.height;
+            //             pageContainer.appendChild(canvas);
+
+            //             const context = canvas.getContext('2d');
+
+            //             // Рендерим страницу на canvas
+            //             await page
+            //                 .render({canvasContext: context, viewport: viewport})
+            //                 .promise;
+
+            //             // Обрабатываем аннотации (ссылки)
+            //             const annotations = await page.getAnnotations();
+            //             annotations.forEach(annotation => {
+            //                 if (annotation.subtype === 'Link') {
+            //                     addLinkAnnotation(annotation, pageContainer, viewport, pageNum);
+            //                 }
+            //             });
+            //         }
+            //     } catch (error) {
+            //         console.error('Ошибка загрузки PDF:', error);
+            //     }
+            // }
 
             // Функция для добавления ссылок на страницу
             function addLinkAnnotation(annotation, pageContainer, viewport, currentPage) {
@@ -156,10 +186,10 @@
             }
 
             // Запускаем рендеринг PDF
-            renderPDF();
+            renderPDF(1);
 
             window.addEventListener('resize', () => {
-                renderPDF();
+                renderPDF(1);
             });
         </script>
     </body>
