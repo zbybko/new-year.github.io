@@ -45,115 +45,148 @@
 
             let pdfDoc = null;
 
-            // Функция для рендеринга всех страниц PDF
-            async function renderPDF() {
-                try {
-                    pdfDoc = await pdfjsLib
-                        .getDocument(url)
-                        .promise;
-                    console.log('PDF загружен');
+            pdfjsLib.getDocument(url).promise.then(pdf => {
+                console.log(`Документ содержит ${pdf.numPages} страниц`);
 
-                    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-                        const page = await pdfDoc.getPage(pageNum);
-                        const viewport = page.getViewport({scale: 1.5});
-
-                        // Создаем контейнер для страницы и ссылок
-                        const pageContainer = document.createElement('div');
-                        pageContainer.style.position = 'relative';
-                        pdfContainer.appendChild(pageContainer);
-
-                        // Создаем canvas для рендеринга страницы
+                function renderPage(pageNum) {
+                    pdf.getPage(pageNum).then(page => {
                         const canvas = document.createElement('canvas');
-                        canvas.width = viewport.width;
-                        canvas.height = viewport.height;
-                        pageContainer.appendChild(canvas);
-
                         const context = canvas.getContext('2d');
 
-                        // Рендерим страницу на canvas
-                        await page
-                            .render({canvasContext: context, viewport: viewport})
-                            .promise;
+                        const container = document.getElementById('pdf-container');
+                        container.innerHTML = '';
 
-                        // Обрабатываем аннотации (ссылки)
-                        const annotations = await page.getAnnotations();
-                        annotations.forEach(annotation => {
-                            if (annotation.subtype === 'Link') {
-                                addLinkAnnotation(annotation, pageContainer, viewport, pageNum);
-                            }
+                        const scale = container.clientWidth / page.getViewport({ scale: 1 }).width;
+
+                        const viewport = page.getViewport({ scale: scale });
+
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+
+                        page.render({
+                            canvasContext: context,
+                            viewport: viewport
                         });
-                    }
-                } catch (error) {
-                    console.error('Ошибка загрузки PDF:', error);
-                }
-            }
 
-            // Функция для добавления ссылок на страницу
-            function addLinkAnnotation(annotation, pageContainer, viewport, currentPage) {
-                const [x1, y1, x2, y2] = annotation.rect;
-                const {width, height} = viewport;
-
-                // Конвертируем координаты из PDF в координаты на странице
-                const left = Math.min(x1, x2) * viewport.scale;
-                const top = height - Math.max(y1, y2) * viewport.scale;
-                const linkWidth = Math.abs(x2 - x1) * viewport.scale;
-                const linkHeight = Math.abs(y2 - y1) * viewport.scale;
-
-                const link = document.createElement('a');
-                link.className = 'pdf-link';
-                link.style.left = `${left}px`;
-                link.style.top = `${top}px`;
-                link.style.width = `${linkWidth}px`;
-                link.style.height = `${linkHeight}px`;
-
-                if (annotation.url) {
-                    // Внешняя ссылка
-                    link.href = annotation.url;
-                    link.target = '_blank';
-                } else if (annotation.dest) {
-                    console.log(annotation);
-                    // Получаем номер страницы назначения с учетом смещения на 4 страницы назад
-                    const destinationPage = getDestinationPageNumber(annotation.dest); // Получаем номер страницы с учетом смещения
-                    link.href = `#page-${destinationPage}`;  // Устанавливаем правильный href
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        goToDestination(annotation.dest);
+                        container.appendChild(canvas);
                     });
                 }
 
-                pageContainer.appendChild(link);
-            }
+                renderPage(1);
+
+            }).catch(error => {
+                console.error('Error loadig pdf:', error);
+            });
+
+            // Функция для рендеринга всех страниц PDF
+            // async function renderPDF() {
+            //     try {
+            //         pdfDoc = await pdfjsLib
+            //             .getDocument(url)
+            //             .promise;
+            //         console.log('PDF загружен');
+
+            //         for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+            //             const page = await pdfDoc.getPage(pageNum);
+            //             const viewport = page.getViewport({scale: 1.5});
+
+            //             // Создаем контейнер для страницы и ссылок
+            //             const pageContainer = document.createElement('div');
+            //             pageContainer.style.position = 'relative';
+            //             pdfContainer.appendChild(pageContainer);
+
+            //             // Создаем canvas для рендеринга страницы
+            //             const canvas = document.createElement('canvas');
+            //             canvas.width = viewport.width;
+            //             canvas.height = viewport.height;
+            //             pageContainer.appendChild(canvas);
+
+            //             const context = canvas.getContext('2d');
+
+            //             // Рендерим страницу на canvas
+            //             await page
+            //                 .render({canvasContext: context, viewport: viewport})
+            //                 .promise;
+
+            //             // Обрабатываем аннотации (ссылки)
+            //             const annotations = await page.getAnnotations();
+            //             annotations.forEach(annotation => {
+            //                 if (annotation.subtype === 'Link') {
+            //                     addLinkAnnotation(annotation, pageContainer, viewport, pageNum);
+            //                 }
+            //             });
+            //         }
+            //     } catch (error) {
+            //         console.error('Ошибка загрузки PDF:', error);
+            //     }
+            // }
+
+            // Функция для добавления ссылок на страницу
+            // function addLinkAnnotation(annotation, pageContainer, viewport, currentPage) {
+            //     const [x1, y1, x2, y2] = annotation.rect;
+            //     const {width, height} = viewport;
+
+            //     // Конвертируем координаты из PDF в координаты на странице
+            //     const left = Math.min(x1, x2) * viewport.scale;
+            //     const top = height - Math.max(y1, y2) * viewport.scale;
+            //     const linkWidth = Math.abs(x2 - x1) * viewport.scale;
+            //     const linkHeight = Math.abs(y2 - y1) * viewport.scale;
+
+            //     const link = document.createElement('a');
+            //     link.className = 'pdf-link';
+            //     link.style.left = `${left}px`;
+            //     link.style.top = `${top}px`;
+            //     link.style.width = `${linkWidth}px`;
+            //     link.style.height = `${linkHeight}px`;
+
+            //     if (annotation.url) {
+            //         // Внешняя ссылка
+            //         link.href = annotation.url;
+            //         link.target = '_blank';
+            //     } else if (annotation.dest) {
+            //         console.log(annotation);
+            //         // Получаем номер страницы назначения с учетом смещения на 4 страницы назад
+            //         const destinationPage = getDestinationPageNumber(annotation.dest); // Получаем номер страницы с учетом смещения
+            //         link.href = `#page-${destinationPage}`;  // Устанавливаем правильный href
+            //         link.addEventListener('click', (e) => {
+            //             e.preventDefault();
+            //             goToDestination(annotation.dest);
+            //         });
+            //     }
+
+            //     pageContainer.appendChild(link);
+            // }
 
             // Функция для извлечения номера страницы из массива dest с учетом смещения на 4 страницы
-            function getDestinationPageNumber(dest) {
-                if (Array.isArray(dest) && dest.length > 0 && dest[0].num !== undefined) {
-                    return Math.max(dest[0].num - 4, 0) + 1;  // Смещаем на 4 страницы назад, но не ниже первой страницы
-                }
-                return 1;  // Если не найдено, возвращаем первую страницу по умолчанию
-            }
+            // function getDestinationPageNumber(dest) {
+            //     if (Array.isArray(dest) && dest.length > 0 && dest[0].num !== undefined) {
+            //         return Math.max(dest[0].num - 4, 0) + 1;  // Смещаем на 4 страницы назад, но не ниже первой страницы
+            //     }
+            //     return 1;  // Если не найдено, возвращаем первую страницу по умолчанию
+            // }
 
-            async function goToDestination(dest) {
-                try {
-                    // Если dest — массив с объектом, получаем номер страницы из первого элемента
-                    if (Array.isArray(dest) && dest.length > 0 && dest[0].num !== undefined) {
-                        const pageIndex = dest[0].num; // Номер страницы (начинается с 0)
-                        const pageNumber = pageIndex + 1 - 4; // Смещаем на 4 страницы назад
+            // async function goToDestination(dest) {
+            //     try {
+            //         // Если dest — массив с объектом, получаем номер страницы из первого элемента
+            //         if (Array.isArray(dest) && dest.length > 0 && dest[0].num !== undefined) {
+            //             const pageIndex = dest[0].num; // Номер страницы (начинается с 0)
+            //             const pageNumber = pageIndex + 1 - 4; // Смещаем на 4 страницы назад
 
-                        // Прокручиваем к нужной странице
-                        const pageElements = document.querySelectorAll('#pdf-container > div');
-                        if (pageElements[pageNumber - 1] && pageNumber > 0) {
-                            pageElements[pageNumber - 1].scrollIntoView({behavior: 'smooth'});
-                        }
-                    } else {
-                        console.error('Неверный формат dest:', dest);
-                    }
-                } catch (error) {
-                    console.error('Ошибка перехода к якорю:', error);
-                }
-            }
+            //             // Прокручиваем к нужной странице
+            //             const pageElements = document.querySelectorAll('#pdf-container > div');
+            //             if (pageElements[pageNumber - 1] && pageNumber > 0) {
+            //                 pageElements[pageNumber - 1].scrollIntoView({behavior: 'smooth'});
+            //             }
+            //         } else {
+            //             console.error('Неверный формат dest:', dest);
+            //         }
+            //     } catch (error) {
+            //         console.error('Ошибка перехода к якорю:', error);
+            //     }
+            // }
 
             // Запускаем рендеринг PDF
-            renderPDF();
+            // renderPDF();
         </script>
     </body>
 </html>
