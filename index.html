@@ -2,6 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Scrollable PDF Viewer with PDF.js</title>
         <style>
             * {
@@ -45,6 +46,8 @@
 
             let pdfDoc = null;
 
+            const currentPage = 1;
+
             pdfjsLib.getDocument(url).promise.then(pdf => {
                 console.log(`Документ содержит ${pdf.numPages} страниц`);
 
@@ -76,6 +79,12 @@
 
             }).catch(error => {
                 console.error('Error loadig pdf:', error);
+            });
+
+            renderPage(currentPage);
+
+            window.addEventListener('resize', () => {
+                renderPage(currentPage);
             });
 
             // Функция для рендеринга всех страниц PDF
