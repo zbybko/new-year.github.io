@@ -47,7 +47,11 @@
 
             let pdfDoc = null;
 
-            function renderPDF(pageNum) {
+            async function renderPDF(pageNum) {
+                pdfDoc = await pdfjsLib
+                         .getDocument(url)
+                         .promise;
+
                 if (!pdfDoc) return;
 
                 pdfDoc.getPage(pageNum).then(page => {
@@ -55,23 +59,19 @@
                     const context = canvas.getContext('2d');
 
                     const container = document.getElementById('pdf-container');
-                    container.innerHTML = ''; // Очистка контейнера перед рендерингом новой страницы
+                    container.innerHTML = '';
 
-                    // Получаем ширину контейнера и вычисляем масштаб
                     const scale = container.clientWidth / page.getViewport({ scale: 1 }).width;
                     const viewport = page.getViewport({ scale: scale });
 
-                    // Устанавливаем размеры канваса
                     canvas.height = viewport.height;
                     canvas.width = viewport.width;
 
-                    // Рендерим страницу на канвасе
                     page.render({
                     canvasContext: context,
                     viewport: viewport
                     });
 
-                    // Добавляем канвас в контейнер
                     container.appendChild(canvas);
                 });
             }
