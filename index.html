@@ -56,7 +56,7 @@
 
                 pdfContainer.innerHTML=""
                 
-                for (let pageNum = 1; pageNum <= 10; pageNum++) {
+                for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
                     const page = await pdfDoc.getPage(pageNum);
 
                     const canvas = document.createElement('canvas');
@@ -201,10 +201,6 @@
 
             // Запускаем рендеринг PDF
             renderPDF();
-
-            window.addEventListener('resize', () => {
-                renderPDF();
-            });
         </script>
     </body>
 </html>
