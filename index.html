@@ -2,7 +2,8 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
         <title>Scrollable PDF Viewer with PDF.js</title>
         <style>
             * {
@@ -97,11 +98,8 @@
 
             function addLinkAnnotation(annotation, pageContainer, viewport) {
                 const [x1, y1, x2, y2] = annotation.rect;
+                const scale = viewport.scale; // Убрали влияние devicePixelRatio
 
-                // Коэффициент для приведения аннотаций к масштабу viewport
-                const scale = viewport.scale;
-
-                // Переводим координаты из PDF в координаты на странице
                 const left = (x1 * scale) / viewport.width * 100;
                 const top = ((viewport.height - y2 * scale) / viewport.height) * 100;
                 const linkWidth = ((x2 - x1) * scale) / viewport.width * 100;
@@ -113,6 +111,8 @@
                 link.style.top = `${top}%`;
                 link.style.width = `${linkWidth}%`;
                 link.style.height = `${linkHeight}%`;
+
+                console.log(`Link position: left=${left}%, top=${top}%`);
 
                 if (annotation.url) {
                     link.href = annotation.url;
