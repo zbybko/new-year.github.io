@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1  .0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Scrollable PDF Viewer with PDF.js</title>
         <style>
             * {
@@ -21,17 +21,24 @@
                 height: 100%;
                 overflow-y: auto;
                 background-color: #f0f0f0;
+                position: relative;
             }
             .pdf-page {
                 display: block;
                 width: 100%;
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
                 background-color: #fff;
+                position: relative;
             }
             .pdf-link {
                 position: absolute;
                 cursor: pointer;
                 z-index: 10;
+                border: 2px solid transparent;
+                transition: border 0.2s ease;
+            }
+            .pdf-link:hover {
+                border: 2px solid rgba(0, 0, 255, 0.5);
             }
         </style>
     </head>
@@ -48,16 +55,9 @@
             let pdfDoc = null;
 
             async function renderPDF() {
-                if (!pdfDoc) {
-                    pdfDoc = await pdfjsLib
-                        .getDocument(url)
-                        .promise;
-                }
-
-                if (!pdfDoc) 
-                    return;
-                
-                pdfContainer.innerHTML = "";
+                pdfDoc = await pdfjsLib
+                    .getDocument(url)
+                    .promise;
 
                 for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
                     await renderPage(pageNum);
@@ -70,23 +70,21 @@
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
 
-                const scale = (pdfContainer.clientWidth / page.getViewport({scale: 1}).width) * window.devicePixelRatio;
-                const viewport = page.getViewport({scale});
+                const viewport = page.getViewport({scale: 1.5}); // Фиксированный scale для качества
 
                 canvas.width = viewport.width;
                 canvas.height = viewport.height;
-                canvas.style.width = `${viewport.width / window.devicePixelRatio}px`;
-                canvas.style.height = `${viewport.height / window.devicePixelRatio}px`;
+                canvas.style.width = '100%';
+                canvas.style.height = 'auto';
 
                 const pageContainer = document.createElement('div');
-                pageContainer.style.position = 'relative';
                 pageContainer
                     .classList
                     .add('pdf-page');
                 pageContainer.appendChild(canvas);
 
                 await page
-                    .render({canvasContext: context, viewport: viewport})
+                    .render({canvasContext: context, viewport})
                     .promise;
 
                 const annotations = await page.getAnnotations();
@@ -100,93 +98,30 @@
             function addLinkAnnotation(annotation, pageContainer, viewport) {
                 const [x1, y1, x2, y2] = annotation.rect;
 
-                // Вычисляем позицию аннотации с учетом масштаба
-                const scale = viewport.scale / 2; // Применяем масштаб
-                const {width, height} = viewport;
+                // Коэффициент для приведения аннотаций к масштабу viewport
+                const scale = viewport.scale;
 
-                const left = x1 * scale;
-                const top = (height - y2) * scale;
-
-                // Пропорциональные сдвиги для разных экранов
-                let linkShift = 0;
-
-                const screenWidth = window.innerWidth;
-
-                // Для маленьких экранов (мобильные устройства)
-                if (screenWidth <= 400) {
-                    linkShift = 50// Для средних экранов (планшеты); // Для мобильных - сдвиг 50px
-                } else if (screenWidth > 401 && screenWidth <= 699) {
-                    linkShift = -20
-                }
-                else if (screenWidth > 700 && screenWidth <= 1023) {
-                    linkShift = -550// Для больших экранов; // Для планшетов сдвиг меньше
-                }
-                else if (screenWidth > 1023 && screenWidth <= 1400) {
-                    linkShift = -1200// Для больших экранов; // Для планшетов сдвиг меньше
-                } else {
-                    linkShift = -2900; // Для больших экранов минимальный сдвиг
-                }
-
-                // Применение пропорционального сдвига
-                const linkWidth = (x2 - x1) * scale;
-                const linkHeight = (y2 - y1) * scale;
+                // Переводим координаты из PDF в координаты на странице
+                const left = (x1 * scale) / viewport.width * 100;
+                const top = ((viewport.height - y2 * scale) / viewport.height) * 100;
+                const linkWidth = ((x2 - x1) * scale) / viewport.width * 100;
+                const linkHeight = ((y2 - y1) * scale) / viewport.height * 100;
 
                 const link = document.createElement('a');
                 link.className = 'pdf-link';
-                link.style.left = `${left}px`;
-                link.style.top = `${top + linkShift}px`; // Применяем сдвиг в зависимости от ширины экрана
-                link.style.width = `${linkWidth}px`;
-                link.style.height = `${linkHeight}px`;
+                link.style.left = `${left}%`;
+                link.style.top = `${top}%`;
+                link.style.width = `${linkWidth}%`;
+                link.style.height = `${linkHeight}%`;
 
-                // Привязка ссылки
                 if (annotation.url) {
                     link.href = annotation.url;
                     link.target = '_blank';
-                } else if (annotation.dest) {
-                    const destinationPage = getDestinationPageNumber(annotation.dest);
-                    link.href = `#page-${destinationPage}`;
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        goToDestination(annotation.dest);
-                    });
                 }
 
                 pageContainer.appendChild(link);
             }
 
-            function getDestinationPageNumber(dest) {
-                if (Array.isArray(dest) && dest.length > 0 && dest[0].num !== undefined) {
-                    return dest[0].num; // Используем правильный номер страницы
-                }
-                return 1; // Если dest не определен, возвращаем страницу 1
-            }
-
-            async function goToDestination(dest) {
-                try {
-                    if (Array.isArray(dest) && dest.length > 0 && dest[0].num !== undefined) {
-                        const pageIndex = dest[0].num;
-                        const pageElements = document.querySelectorAll('#pdf-container > div');
-                        if (pageElements[pageIndex - 1]) {
-                            pageElements[pageIndex - 1].scrollIntoView({behavior: 'smooth'});
-                        }
-                    } else {
-                        console.error('Неверный формат dest:', dest);
-                    }
-                } catch (error) {
-                    console.error('Ошибка перехода к якорю:', error);
-                }
-            }
-
-            // Функция для дебаунса при изменении размеров окна
-            function debounce(func, delay) {
-                let timeout;
-                return function () {
-                    clearTimeout(timeout);
-                    timeout = setTimeout(func, delay);
-                };
-            }
-
-            window.addEventListener('resize', debounce(renderPDF, 200));
             renderPDF();
         </script>
     </body>
