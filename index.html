@@ -111,6 +111,12 @@
                 pageContainer.appendChild(canvas);
 
                 await page.render({ canvasContext: context, viewport }).promise;
+
+                const annotations = await page.getAnnotations();
+                annotations.forEach((annotation) => {
+                    addLinkAnnotation(annotation, pageContainer, viewport);
+                });
+
                 pdfContainer.appendChild(pageContainer);
             }
 
