@@ -41,27 +41,56 @@
             .pdf-link:hover {
                 border: 2px solid rgba(0, 0, 255, 0.5);
             }
+            .loading {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+            }
+            .loading img {
+                width: 200px;
+                height: 200px;
+            }
         </style>
     </head>
     <body>
-        <div id="pdf-container"></div>
+        <div id="pdf-container">
+            <div class="loading">
+                <img src="./spinner.gif" alt="Loading...">
+            </div>
+        </div>
 
         <script type="module">
             import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.9.155/+esm';
 
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.9.155/build/pdf.worker.mjs';
 
-            const url = 'https://web-padawans-tent.github.io/new-year.github.io/Festive.pdf';
+            const url = 'https://web-padawans-tent.github.io/new-year.github.io/Festive-kompressed.pdf';
             const pdfContainer = document.getElementById('pdf-container');
             let pdfDoc = null;
+            let currentPage = 0;
+            const pageBatchSize = 10;
+            let isLoading = false;
 
-            async function renderPDF() {
-                pdfDoc = await pdfjsLib
-                    .getDocument(url)
-                    .promise;
+            async function loadPDF() {
+                pdfDoc = await pdfjsLib.getDocument(url).promise;
+                pdfContainer.querySelector('.loading').remove();
+                loadNextPages();
+            }
 
-                for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+            async function loadNextPages() {
+                if (isLoading) return;
+                isLoading = true;
+
+                const nextPageLimit = Math.min(currentPage + pageBatchSize, pdfDoc.numPages);
+                for (let pageNum = currentPage + 1; pageNum <= nextPageLimit; pageNum++) {
                     await renderPage(pageNum);
+                }
+                currentPage = nextPageLimit;
+                isLoading = false;
+
+                if (currentPage >= pdfDoc.numPages) {
+                    pdfContainer.removeEventListener('scroll', onScroll);
                 }
             }
 
@@ -70,8 +99,7 @@
 
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
-
-                const viewport = page.getViewport({scale: 1.5}); // Фиксированный scale для качества
+                const viewport = page.getViewport({ scale: 1.5 });
 
                 canvas.width = viewport.width;
                 canvas.height = viewport.height;
@@ -79,21 +107,20 @@
                 canvas.style.height = 'auto';
 
                 const pageContainer = document.createElement('div');
-                pageContainer
-                    .classList
-                    .add('pdf-page');
+                pageContainer.classList.add('pdf-page');
                 pageContainer.appendChild(canvas);
 
-                await page
-                    .render({canvasContext: context, viewport})
-                    .promise;
-
-                const annotations = await page.getAnnotations();
-                annotations.forEach((annotation) => {
-                    addLinkAnnotation(annotation, pageContainer, viewport);
-                });
-
+                await page.render({ canvasContext: context, viewport }).promise;
                 pdfContainer.appendChild(pageContainer);
+            }
+
+            function onScroll() {
+                const scrollPosition = pdfContainer.scrollTop + pdfContainer.clientHeight;
+                const scrollHeight = pdfContainer.scrollHeight;
+
+                if (scrollHeight - scrollPosition < 100 && !isLoading) {
+                    loadNextPages();
+                }
             }
 
             function addLinkAnnotation(annotation, pageContainer, viewport) {
@@ -122,7 +149,8 @@
                 pageContainer.appendChild(link);
             }
 
-            renderPDF();
+            loadPDF();
+            pdfContainer.addEventListener('scroll', onScroll);
         </script>
     </body>
 </html>
