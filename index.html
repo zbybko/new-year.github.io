@@ -60,11 +60,8 @@
             </div>
         </div>
 
-        <script type="module">
-            import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.9.155/+esm';
-
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.9.155/build/pdf.worker.mjs';
-
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+        <script>
             const url = 'https://web-padawans-tent.github.io/new-year.github.io/Festive-kompressed.pdf';
             const pdfContainer = document.getElementById('pdf-container');
             let pdfDoc = null;
